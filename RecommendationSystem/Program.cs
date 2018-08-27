@@ -11,15 +11,15 @@ namespace RecommendationSystem
             var fileService = new FileService();
             var encodeService = new EncodeService();
             var linUcbService = new LinUcbService();
+            var uiService = new UIService();
 
             var t = fileService.ReadFile();
             var c = encodeService.Encode(t);
 
             linUcbService.Learn(c);
 
+            uiService.DisplayApplication();
             var V = Vector<double>.Build;
-            Console.WriteLine("Age (Young, Middle, Old):");
-            var line = Console.ReadLine();
             var vector = V.DenseOfArray(new double[] { 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 });
 
             var recomenndation = linUcbService.RecommendMovie(vector);
