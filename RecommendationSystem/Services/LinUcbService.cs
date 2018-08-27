@@ -37,24 +37,60 @@ namespace RecommendationSystem.Services
                     B = B + rating * userAttribute.UserAttribute;
                 }
 
-                result.Add(new LinUcbResult(A, B, encodedRating.MovieName));
+                //result.Add(new LinUcbResult(A, B, encodedRating.MovieName));
             }
         }
 
-        public string RecommendMovie(Vector<double> userAttribute)
+        public void LearnFromMovieLens(Dictionary<int, EncodedUser> encodedUsers, IEnumerable<MovieLensRating> movieLensRatings)
+        {
+            var M = Matrix<double>.Build;
+            var V = Vector<double>.Build;
+
+            var ratingsWithEncodedUser = movieLensRatings.Select(movieLensRating => new EncodedMovieLensRating()
+            {
+                MovieId = movieLensRating.MovieId,
+                Rating = movieLensRating.Rating,
+                EncodedUser = encodedUsers[movieLensRating.UserId].EncodedAttributes
+            }).ToList().GroupBy(r => r.MovieId);
+
+            foreach (var ratingWithEncodedUser in ratingsWithEncodedUser)
+            {
+                var A = M.DenseIdentity(30);
+                var B = V.Dense(30, 0.0);
+
+                foreach (var rating in ratingWithEncodedUser)
+                {
+                    var teta = A.Inverse() * B;
+                    var test = rating.EncodedUser.ToColumnMatrix();
+                    var test2 = rating.EncodedUser.ToRowMatrix();
+
+                    var result = test * test2;
+
+                    A = A + result;
+
+                    var ratio = rating.Rating > 3 ? 1 : 0;
+                    B = B + ratio * rating.EncodedUser;
+                }
+
+                result.Add(new LinUcbResult(A, B, ratingWithEncodedUser.Key));
+            }
+        }
+
+        public string RecommendMovie(Vector<double> userCode, IEnumerable<MovieLensMovie> movieLensMovies)
         {
             var recommendation = new List<Recommendation>();
 
             foreach (var movie in result)
             {
                 var teta = movie.A.Inverse() * movie.B;
-                var first = teta.ToColumnMatrix().TransposeThisAndMultiply(userAttribute);
-                var second = userAttribute.ToRowMatrix() * movie.A.Inverse() * userAttribute.ToColumnMatrix();
+                var first = teta.ToColumnMatrix().TransposeThisAndMultiply(userCode);
+                var second = userCode.ToRowMatrix() * movie.A.Inverse() * userCode.ToColumnMatrix();
 
                 var score = Math.Sqrt(first.ToArray()[0] + second.ToArray()[0,0]);
-                recommendation.Add(new Recommendation { MovieName = movie.MovieName, Result = score });
+                recommendation.Add(new Recommendation { MovieId = movie.MovieId, Result = score });
             }
-            return recommendation.OrderByDescending(r => r.Result).First().MovieName;
+            var topMovieId = recommendation.OrderByDescending(r => r.Result).First().MovieId;
+            return movieLensMovies.Where(movie => movie.MovieId == topMovieId).First().Name;
         }
     }
 }

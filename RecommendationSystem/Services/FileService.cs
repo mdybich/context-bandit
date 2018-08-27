@@ -8,6 +8,8 @@ namespace RecommendationSystem.Services
 {
     public class FileService
     {
+        private readonly string separator = "::";
+
         public IEnumerable<MovieRating> ReadFile()
         {
             var movieRatings = new List<MovieRating>();
@@ -36,6 +38,54 @@ namespace RecommendationSystem.Services
             }
 
             return movieRatings;
+        }
+
+        public IEnumerable<MovieLensUser> ReadUsers()
+        {
+            var users = new List<MovieLensUser>();
+
+            using (var reader = new StreamReader(@"C:\data\users.dat"))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var userAttributes = reader.ReadLine().Split(separator);
+                    users.Add(new MovieLensUser(userAttributes));
+                }
+            }
+
+            return users;
+        }
+
+        public IEnumerable<MovieLensMovie> ReadMovies()
+        {
+            var movies = new List<MovieLensMovie>();
+
+            using (var reader = new StreamReader(@"C:\data\movies.dat"))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var userAttributes = reader.ReadLine().Split(separator);
+                    movies.Add(new MovieLensMovie(userAttributes));
+                }
+            }
+
+            return movies;
+        }
+
+        public IEnumerable<MovieLensRating> ReadRatings()
+        {
+            var ratings = new List<MovieLensRating>();
+
+            using (var reader = new StreamReader(@"C:\data\ratings.dat"))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var userAttributes = reader.ReadLine().Split(separator);
+                    ratings.Add(new MovieLensRating(userAttributes));
+                }
+            }
+
+            return ratings;
         }
     }
 }

@@ -6,7 +6,7 @@ namespace RecommendationSystem.Models
 {
     public class Recommendation
     {
-        public string MovieName { get; set; }
+        public int MovieId { get; set; }
         public double Result { get; set; }
     }
 }

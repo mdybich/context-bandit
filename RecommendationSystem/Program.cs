@@ -14,15 +14,25 @@ namespace RecommendationSystem
             var uiService = new UIService();
 
             var t = fileService.ReadFile();
-            var c = encodeService.Encode(t);
+            var users = fileService.ReadUsers();
+            var test2 = fileService.ReadMovies();
+            var test3 = fileService.ReadRatings();
+            var encodedUsers = encodeService.EncodeUser(users);
+            linUcbService.LearnFromMovieLens(encodedUsers, test3);
 
-            linUcbService.Learn(c);
-
-            uiService.DisplayApplication();
+            // uiService.DisplayApplication();
             var V = Vector<double>.Build;
-            var vector = V.DenseOfArray(new double[] { 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 });
+            var vector = V.DenseOfArray(new double[] {
+                0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                1.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0
+            });
 
-            var recomenndation = linUcbService.RecommendMovie(vector);
+            var recomenndation = linUcbService.RecommendMovie(vector, test2);
         }
     }
 }

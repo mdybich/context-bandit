@@ -9,13 +9,13 @@ namespace RecommendationSystem.Models
     {
         public Matrix<double> A { get; set; }
         public Vector<double> B { get; set; }
-        public string MovieName { get; set; }
+        public int MovieId { get; set; }
 
-        public LinUcbResult(Matrix<double> a, Vector<double> b, string movieName)
+        public LinUcbResult(Matrix<double> a, Vector<double> b, int movieId)
         {
             A = a;
             B = b;
-            MovieName = movieName;
+            MovieId = movieId;
         }
     }
 }
