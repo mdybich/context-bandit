@@ -33,6 +33,8 @@ namespace RecommendationSystem
             });
 
             var recomenndation = linUcbService.RecommendMovie(vector, test2);
+
+            linUcbService.UpdateResult(vector, recomenndation.MovieId, 4.0);
         }
     }
 }

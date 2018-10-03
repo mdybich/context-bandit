@@ -76,7 +76,7 @@ namespace RecommendationSystem.Services
             }
         }
 
-        public string RecommendMovie(Vector<double> userCode, IEnumerable<MovieLensMovie> movieLensMovies)
+        public MovieInfo RecommendMovie(Vector<double> userCode, IEnumerable<MovieLensMovie> movieLensMovies)
         {
             var recommendation = new List<Recommendation>();
 
@@ -89,8 +89,29 @@ namespace RecommendationSystem.Services
                 var score = Math.Sqrt(first.ToArray()[0] + second.ToArray()[0,0]);
                 recommendation.Add(new Recommendation { MovieId = movie.MovieId, Result = score });
             }
+            var topMovie = recommendation.OrderByDescending(r => r.Result);
             var topMovieId = recommendation.OrderByDescending(r => r.Result).First().MovieId;
-            return movieLensMovies.Where(movie => movie.MovieId == topMovieId).First().Name;
+            var movieToRecommend = movieLensMovies.Where(movie => movie.MovieId == topMovieId).First();
+
+            return new MovieInfo
+            {
+                MovieId = movieToRecommend.MovieId,
+                MovieName = movieToRecommend.Name
+            };
+        }
+
+        public void UpdateResult(Vector<double> userCode, int movieId, double rating)
+        {
+            var t = result.Find(r => r.MovieId == movieId);
+            var test = userCode.ToColumnMatrix();
+            var test2 = userCode.ToRowMatrix();
+
+            var result1 = test * test2;
+
+            t.A = t.A + result1;
+
+            var ratio = rating > 3 ? 1 : 0;
+            t.B = t.B + ratio * userCode;
         }
     }
 }
