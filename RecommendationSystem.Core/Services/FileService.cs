@@ -48,7 +48,7 @@ namespace RecommendationSystem.Services
             {
                 while (!reader.EndOfStream)
                 {
-                    var userAttributes = reader.ReadLine().Split(separator);
+                    var userAttributes = reader.ReadLine().Split(new string[] { separator }, StringSplitOptions.None);
                     users.Add(new MovieLensUser(userAttributes));
                 }
             }
@@ -64,7 +64,7 @@ namespace RecommendationSystem.Services
             {
                 while (!reader.EndOfStream)
                 {
-                    var userAttributes = reader.ReadLine().Split(separator);
+                    var userAttributes = reader.ReadLine().Split(new string[] { separator }, StringSplitOptions.None);
                     movies.Add(new MovieLensMovie(userAttributes));
                 }
             }
@@ -80,7 +80,7 @@ namespace RecommendationSystem.Services
             {
                 while (!reader.EndOfStream)
                 {
-                    var userAttributes = reader.ReadLine().Split(separator);
+                    var userAttributes = reader.ReadLine().Split(new string[] { separator }, StringSplitOptions.None);
                     ratings.Add(new MovieLensRating(userAttributes));
                 }
             }

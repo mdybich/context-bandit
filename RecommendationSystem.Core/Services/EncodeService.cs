@@ -6,6 +6,7 @@ using MathNet.Numerics.LinearAlgebra;
 
 using UserAttributeCode = System.Tuple<string, int[]>;
 using OccupationCode = System.Tuple<int, int[]>;
+using RecommendationSystem.Core.Models;
 
 namespace RecommendationSystem.Services
 {
@@ -68,21 +69,26 @@ namespace RecommendationSystem.Services
 
             foreach (var movieLensUser in movieLensUsers)
             {
-                var ageCode = newAgeCodes.Find(code => code.Item1 == movieLensUser.AgeGroup).Item2;
-                var genderCode = genderCodes.Find(code => code.Item1 == movieLensUser.Gender).Item2;
-                var occupationCode = occupationCodes.Find(code => code.Item1 == movieLensUser.OccupationId).Item2;
+                var userVector = GetUserVector(movieLensUser, V);
 
-                var userCode = genderCode
-                    .Concat(ageCode)
-                    .Concat(occupationCode)
-                    .Select(Convert.ToDouble)
-                    .ToArray();
-
-                var userVector = V.DenseOfArray(userCode);
                 encodedUsers.Add(new EncodedUser { UserId = movieLensUser.UserId, EncodedAttributes = userVector });
             }
 
             return encodedUsers.ToDictionary(e => e.UserId);
+        }
+
+        public Vector<double> GetUserVector(IBasicUserInfo userInfo, VectorBuilder<double> vectorBuilder) {
+            var ageCode = newAgeCodes.Find(code => code.Item1 == userInfo.AgeGroup).Item2;
+            var genderCode = genderCodes.Find(code => code.Item1 == userInfo.Gender).Item2;
+            var occupationCode = occupationCodes.Find(code => code.Item1 == userInfo.OccupationId).Item2;
+
+            var userCode = genderCode
+                .Concat(ageCode)
+                .Concat(occupationCode)
+                .Select(Convert.ToDouble)
+                .ToArray();
+
+            return vectorBuilder.DenseOfArray(userCode);
         }
 
         private void GenerateAgeCodes()

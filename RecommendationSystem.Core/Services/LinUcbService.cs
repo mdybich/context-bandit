@@ -10,6 +10,22 @@ namespace RecommendationSystem.Services
     public class LinUcbService
     {
         private List<LinUcbResult> result = new List<LinUcbResult>();
+        private static LinUcbService instance;
+
+        public static LinUcbService Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new LinUcbService();
+                }
+
+                return instance;
+            }
+        }
+
+        private LinUcbService() {}
 
         public void Learn(List<EncodedRating> encodedRatings)
         {
@@ -78,7 +94,7 @@ namespace RecommendationSystem.Services
             }
         }
 
-        public MovieInfo RecommendMovie(Vector<double> userCode, IEnumerable<MovieLensMovie> movieLensMovies)
+        public IEnumerable<MovieLensMovie> RecommendMovies(Vector<double> userCode, IEnumerable<MovieLensMovie> movieLensMovies)
         {
             var recommendation = new List<Recommendation>();
 
@@ -91,15 +107,11 @@ namespace RecommendationSystem.Services
                 var score = Math.Sqrt(first.ToArray()[0] + second.ToArray()[0,0]);
                 recommendation.Add(new Recommendation { MovieId = movie.MovieId, Result = score });
             }
-            var topMovie = recommendation.OrderByDescending(r => r.Result);
-            var topMovieId = recommendation.OrderByDescending(r => r.Result).First().MovieId;
-            var movieToRecommend = movieLensMovies.Where(movie => movie.MovieId == topMovieId).First();
 
-            return new MovieInfo
-            {
-                MovieId = movieToRecommend.MovieId,
-                MovieName = movieToRecommend.Name
-            };
+            var topMovieIds = recommendation.OrderByDescending(r => r.Result).Take(20).Select(r => r.MovieId);
+            var moviesToRecommend = movieLensMovies.Where(movie => topMovieIds.Contains(movie.MovieId));
+
+            return moviesToRecommend;
         }
 
         public IEnumerable<Recommendation> RecommendMovies(Vector<double> userCode)
@@ -115,7 +127,7 @@ namespace RecommendationSystem.Services
                 var score = Math.Sqrt(first.ToArray()[0] + second.ToArray()[0, 0]);
                 recommendation.Add(new Recommendation { MovieId = movie.MovieId, Result = score });
             }
-            return recommendation.OrderByDescending(r => r.Result).Where(r => r.Result > 0.15);
+            return recommendation.OrderByDescending(r => r.Result).Where(r => r.Result > 0.8);
         }
 
         public void Test(Dictionary<int, EncodedUser> encodedUsers, IEnumerable<MovieLensRating> movieLensRatings)
