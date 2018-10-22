@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace RecommendationSystem.Models
+namespace RecommendationSystem.Core.Models
 {
     public class EncodedMovieLensRating
     {

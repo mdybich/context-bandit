@@ -62,7 +62,6 @@
     <Compile Include="Services\EncodeService.cs" />
     <Compile Include="Services\FileService.cs" />
     <Compile Include="Services\LinUcbService.cs" />
-    <Compile Include="Services\UIService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,7 +1,6 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
-using RecommendationSystem.Api.Models;
 using RecommendationSystem.Core.Models;
-using RecommendationSystem.Services;
+using RecommendationSystem.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,8 +1,4 @@
-﻿using RecommendationSystem.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿using RecommendationSystem.Core.Services;
 using System.Web.Http;
 using System.Web.Mvc;
 using System.Web.Optimization;

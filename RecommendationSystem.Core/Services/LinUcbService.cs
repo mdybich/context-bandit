@@ -1,11 +1,10 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
-using RecommendationSystem.Models;
+using RecommendationSystem.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
-namespace RecommendationSystem.Services
+namespace RecommendationSystem.Core.Services
 {
     public class LinUcbService
     {
@@ -104,7 +103,7 @@ namespace RecommendationSystem.Services
                 var first = teta.ToColumnMatrix().TransposeThisAndMultiply(userCode);
                 var second = userCode.ToRowMatrix() * movie.A.Inverse() * userCode.ToColumnMatrix();
 
-                var score = Math.Sqrt(first.ToArray()[0] + second.ToArray()[0,0]);
+                var score = first.ToArray()[0] + 0.1 * Math.Sqrt(second.ToArray()[0,0]);
                 recommendation.Add(new Recommendation { MovieId = movie.MovieId, Result = score });
             }
 
@@ -124,7 +123,7 @@ namespace RecommendationSystem.Services
                 var first = teta.ToColumnMatrix().TransposeThisAndMultiply(userCode);
                 var second = userCode.ToRowMatrix() * movie.A.Inverse() * userCode.ToColumnMatrix();
 
-                var score = Math.Sqrt(first.ToArray()[0] + second.ToArray()[0, 0]);
+                var score = first.ToArray()[0] + Math.Sqrt(second.ToArray()[0, 0]);
                 recommendation.Add(new Recommendation { MovieId = movie.MovieId, Result = score });
             }
             return recommendation.OrderByDescending(r => r.Result).Where(r => r.Result > 0.8);

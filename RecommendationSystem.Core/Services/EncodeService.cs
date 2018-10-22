@@ -1,14 +1,13 @@
-﻿using RecommendationSystem.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
+using RecommendationSystem.Core.Models;
 
 using UserAttributeCode = System.Tuple<string, int[]>;
 using OccupationCode = System.Tuple<int, int[]>;
-using RecommendationSystem.Core.Models;
 
-namespace RecommendationSystem.Services
+namespace RecommendationSystem.Core.Services
 {
     public class EncodeService
     {
