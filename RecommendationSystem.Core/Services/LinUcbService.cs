@@ -26,40 +26,11 @@ namespace RecommendationSystem.Core.Services
 
         private LinUcbService() {}
 
-        public void Learn(List<EncodedRating> encodedRatings)
+        public IEnumerable<LearnResult> LearnFromMovieLens(Dictionary<int, EncodedUser> encodedUsers, IEnumerable<MovieLensRating> movieLensRatings)
         {
             var M = Matrix<double>.Build;
             var V = Vector<double>.Build;
-
-            foreach (var encodedRating in encodedRatings)
-            {
-                var A = M.DenseIdentity(8);
-                var B = V.Dense(8, 0.0);
-
-                foreach (var userAttribute in encodedRating.UserAtttributesWithRating)
-                {
-                    var teta = A.Inverse() * B;
-                    // var first = teta.ToColumnMatrix().TransposeThisAndMultiply(userAttribute.UserAttribute);
-                    // var second =
-                    var test = userAttribute.UserAttribute.ToColumnMatrix();
-                    var test2 = userAttribute.UserAttribute.ToRowMatrix();
-
-                    var result = test * test2;
-
-                    A = A + result;
-
-                    var rating = userAttribute.Rating > 5 ? 1 : 0;
-                    B = B + rating * userAttribute.UserAttribute;
-                }
-
-                //result.Add(new LinUcbResult(A, B, encodedRating.MovieName));
-            }
-        }
-
-        public void LearnFromMovieLens(Dictionary<int, EncodedUser> encodedUsers, IEnumerable<MovieLensRating> movieLensRatings)
-        {
-            var M = Matrix<double>.Build;
-            var V = Vector<double>.Build;
+            var learnResult = new List<LearnResult>();
 
             var ratingsWithEncodedUser = movieLensRatings
                 .Where(movieLensRating => encodedUsers.Any(user => user.Key == movieLensRating.UserId))
@@ -74,10 +45,10 @@ namespace RecommendationSystem.Core.Services
             {
                 var A = M.DenseIdentity(30);
                 var B = V.Dense(30, 0.0);
+                var B_Better = V.Dense(30, 0.0);
 
                 foreach (var rating in ratingWithEncodedUser)
                 {
-                    var teta = A.Inverse() * B;
                     var test = rating.EncodedUser.ToColumnMatrix();
                     var test2 = rating.EncodedUser.ToRowMatrix();
 
@@ -86,11 +57,22 @@ namespace RecommendationSystem.Core.Services
                     A = A + result;
 
                     var ratio = rating.Rating > 3 ? 1 : 0;
+                    var betterRadio = rating.Rating > 2 ? 1 : 0;
                     B = B + ratio * rating.EncodedUser;
+                    B_Better = B_Better + betterRadio * rating.EncodedUser;
                 }
 
                 result.Add(new LinUcbResult(A, B, ratingWithEncodedUser.Key));
+                learnResult.Add(new LearnResult
+                {
+                    MovieId = ratingWithEncodedUser.Key,
+                    A = A.ToArray(),
+                    B = B.ToArray(),
+                    B_Tolerant = B_Better.ToArray()
+                });
             }
+
+            return learnResult;
         }
 
         public IEnumerable<MovieLensMovie> RecommendMovies(Vector<double> userCode, IEnumerable<MovieLensMovie> movieLensMovies)
@@ -111,6 +93,172 @@ namespace RecommendationSystem.Core.Services
             var moviesToRecommend = movieLensMovies.Where(movie => topMovieIds.Contains(movie.MovieId));
 
             return moviesToRecommend;
+        }
+
+        public Dictionary<int, List<PartResult>> GetParts(IEnumerable<LinUcbResult2> learnResult, IEnumerable<MovieLensUser> users, VectorBuilder<double> vectorBuilder)
+        {
+            var encodeService = new EncodeService();
+            var dic = new Dictionary<int, List<PartResult>>();
+            foreach (var user in users)
+            {
+                var userCode = encodeService.GetUserVector(user, vectorBuilder);
+                var parts = new List<PartResult>();
+
+                foreach (var movie in learnResult)
+                {
+                    var inversedA = movie.A.Inverse();
+                    var teta = inversedA * movie.B;
+                    var tetaTolerant = inversedA * movie.B_Tolerant;
+
+                    var exploitation = teta.ToColumnMatrix().TransposeThisAndMultiply(userCode).ToArray()[0];
+                    var expltationTolerant = tetaTolerant.ToColumnMatrix().TransposeThisAndMultiply(userCode).ToArray()[0];
+                    var exploration = Math.Sqrt((userCode.ToRowMatrix() * movie.A.Inverse() * userCode.ToColumnMatrix()).ToArray()[0, 0]);
+
+                    parts.Add(new PartResult
+                    {
+                        MovieId = movie.MovieId,
+                        Exploration = exploration,
+                        Exploitation = exploitation,
+                        ExploitationTolerant = expltationTolerant
+                    });
+                }
+
+                dic.Add(user.UserId, parts);
+            }
+
+            return dic;
+        }
+
+        public List<ConfusionMatrix> Test2(
+            Dictionary<int, List<PartResult>> parts, 
+            IEnumerable<MovieLensUser> users, 
+            IEnumerable<MovieLensRating> movieLensRatings, 
+            double ratio = 1
+            )
+        {
+            var truePositive = 0;
+            var trueNegative = 0;
+            var falsePositive = 0;
+            var falseNegative = 0;
+
+            var truePositiveTolerant = 0;
+            var trueNegativeTolerant = 0;
+            var falsePositiveTolerant = 0;
+            var falseNegativeTolerant = 0;
+
+            foreach (var user in users)
+            {
+                var allRecommendations = new Dictionary<int, double>();
+                var allRecommendationsTolerant = new Dictionary<int, double>();
+
+                var movieParts = parts[user.UserId];
+                foreach (var moviePart in movieParts)
+                {
+                    var exploration = ratio * moviePart.Exploration;
+                    var score = moviePart.Exploitation + exploration;
+                    var scoreTolerant = moviePart.ExploitationTolerant + exploration;
+
+                    allRecommendations.Add(moviePart.MovieId, score);
+                    allRecommendationsTolerant.Add(moviePart.MovieId, scoreTolerant);
+                }
+
+                var average = allRecommendations.Average(r => r.Value);
+                var recommendations = allRecommendations.Where(r => r.Value > average).ToDictionary(r => r.Key, r => r.Value);
+
+                var averateTolerant = allRecommendationsTolerant.Average(r => r.Value);
+                var recommendationsTolerant = allRecommendationsTolerant.Where(r => r.Value > averateTolerant).ToDictionary(r => r.Key, r => r.Value);
+
+                // Wszystkie oceny użytkownika
+                var userRatings = movieLensRatings.Where(rating => rating.UserId == user.UserId);
+
+                foreach (var userRating in userRatings)
+                {
+                    var isRecommended = recommendations.ContainsKey(userRating.MovieId);
+                    var hasPositiveRating = userRating.Rating > 3;
+
+                    if (isRecommended && hasPositiveRating)
+                    {
+                        truePositive++;
+                    }
+
+                    if (!isRecommended && !hasPositiveRating)
+                    {
+                        trueNegative++;
+                    }
+
+                    if (isRecommended && !hasPositiveRating)
+                    {
+                        falsePositive++;
+                    }
+
+                    if (!isRecommended && hasPositiveRating)
+                    {
+                        falseNegative++;
+                    }
+
+                    var isRecommendedWithTolerant = recommendationsTolerant.ContainsKey(userRating.MovieId);
+                    var hasPositiveTolerantRating = userRating.Rating > 2;
+
+                    if (isRecommendedWithTolerant && hasPositiveTolerantRating)
+                    {
+                        truePositiveTolerant++;
+                    }
+
+                    if (!isRecommendedWithTolerant && !hasPositiveTolerantRating)
+                    {
+                        trueNegativeTolerant++;
+                    }
+
+                    if (isRecommendedWithTolerant && !hasPositiveTolerantRating)
+                    {
+                        falsePositiveTolerant++;
+                    }
+
+                    if (!isRecommendedWithTolerant && hasPositiveTolerantRating)
+                    {
+                        falseNegativeTolerant++;
+                    }
+                }
+            }
+
+            var confusionMatrix = GetConfusionMatrix(
+                truePositive,
+                trueNegative,
+                falsePositive,
+                falseNegative,
+                "Standard"
+            );
+
+            var confusionMatrixTolerant = GetConfusionMatrix(
+                truePositiveTolerant,
+                trueNegativeTolerant,
+                falsePositiveTolerant,
+                falseNegativeTolerant,
+                "Tolerant"
+            );
+
+            return new List<ConfusionMatrix>
+            {
+                confusionMatrix,
+                confusionMatrixTolerant
+            };
+        }
+
+        private ConfusionMatrix GetConfusionMatrix(int truePositive, int trueNegative, int falsePositive, int falseNegative, string label)
+        {
+            var sensitivity = (double)truePositive / (truePositive + falseNegative);
+            var specificity = (double)trueNegative / (trueNegative + falsePositive);
+            var precision = (double)truePositive / (truePositive + falsePositive);
+            var accuracy = (double)(truePositive + trueNegative) / (truePositive + trueNegative + falsePositive + falseNegative);
+
+            return new ConfusionMatrix
+            {
+                Sensitivity = sensitivity,
+                Specificity = specificity,
+                Precision = precision,
+                Accuracy = accuracy,
+                Label = label
+            };
         }
 
         public IEnumerable<Recommendation> RecommendMovies(Vector<double> userCode)

@@ -18,4 +18,12 @@ namespace RecommendationSystem.Core.Models
             MovieId = movieId;
         }
     }
+
+    public class LinUcbResult2
+    {
+        public Matrix<double> A { get; set; }
+        public Vector<double> B { get; set; }
+        public Vector<double> B_Tolerant { get; set; }
+        public int MovieId { get; set; }
+    }
 }
